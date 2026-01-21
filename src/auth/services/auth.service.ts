@@ -1,39 +1,47 @@
-// src/auth/services/auth.service.ts
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { UsersService } from '../../modules/users/services/users.service';
-import { StaffService } from '../../modules/staff/services/staff.service';
+import { UsersService } from '../../modules/users/users.service';
+import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
-    private staffService: StaffService,
+    private jwtService: JwtService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
-    // Try to find user in users table
-    let user = await this.usersService.findByEmail(email);
-    
-    if (user) {
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (isPasswordValid) {
-        const { password, ...result } = user;
-        return result;
-      }
+    const user = await this.usersService.findByEmail(email);
+
+    if (!user) {
+      throw new UnauthorizedException('Email tidak ditemukan');
     }
-    
-    // If not found in users, try staff table
-    user = await this.staffService.findByEmail(email);
-    
-    if (user) {
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (isPasswordValid) {
-        const { password, ...result } = user;
-        return result;
-      }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Password salah');
     }
-    
-    return null;
+
+    const { password: _, ...result } = user;
+    return result;
+  }
+
+  async login(user: any) {
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+      },
+    };
   }
 }
