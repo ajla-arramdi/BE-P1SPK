@@ -8,7 +8,6 @@ import {
   Param,
   UseGuards,
   Request,
-  ForbiddenException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -35,7 +34,7 @@ export class UsersController {
 
   /**
    * GET /users/profile
-   * User dapat melihat profil sendiri
+   * Semua user dapat melihat profil sendiri
    */
   @Get('profile')
   getProfile(@Request() req) {
@@ -64,28 +63,11 @@ export class UsersController {
 
   /**
    * PUT /users/:id
-   * Admin dapat update semua user
-   * Staff & User hanya dapat update diri sendiri
+   * Hanya Admin yang dapat update user
    */
   @Put(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() updateUserDto: UpdateUserDto,
-    @Request() req,
-  ) {
-    const currentUser = req.user;
-
-    // Admin dapat update siapa saja
-    if (currentUser.role === UserRole.ADMIN) {
-      return this.usersService.update(id, updateUserDto);
-    }
-
-    // Staff & User hanya dapat update diri sendiri
-    if (currentUser.id !== id) {
-      throw new ForbiddenException('Anda hanya dapat mengubah data sendiri');
-    }
-    // Staff & User tidak boleh mengubah role
-    delete updateUserDto.role;
+  @Roles(UserRole.ADMIN)
+  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
   }
 
