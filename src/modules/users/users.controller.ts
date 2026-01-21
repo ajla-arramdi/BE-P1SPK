@@ -25,10 +25,10 @@ export class UsersController {
 
   /**
    * GET /users
-   * Admin & Staff dapat melihat semua user
+   * Hanya Admin yang dapat melihat semua user
    */
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  @Roles(UserRole.ADMIN)
   findAll() {
     return this.usersService.findAll();
   }
@@ -44,10 +44,10 @@ export class UsersController {
 
   /**
    * GET /users/:id
-   * Admin & Staff dapat melihat user tertentu
+   * Hanya Admin yang dapat melihat user tertentu
    */
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  @Roles(UserRole.ADMIN)
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
   }
@@ -65,8 +65,7 @@ export class UsersController {
   /**
    * PUT /users/:id
    * Admin dapat update semua user
-   * Staff dapat update user biasa
-   * User hanya dapat update diri sendiri
+   * Staff & User hanya dapat update diri sendiri
    */
   @Put(':id')
   async update(
@@ -81,22 +80,11 @@ export class UsersController {
       return this.usersService.update(id, updateUserDto);
     }
 
-    // Staff dapat update user biasa (bukan admin/staff lain)
-    if (currentUser.role === UserRole.STAFF) {
-      const targetUser = await this.usersService.findOne(id);
-      if (targetUser.role !== UserRole.USER) {
-        throw new ForbiddenException('Staff hanya dapat mengubah user biasa');
-      }
-      // Staff tidak boleh mengubah role
-      delete updateUserDto.role;
-      return this.usersService.update(id, updateUserDto);
-    }
-
-    // User hanya dapat update diri sendiri
+    // Staff & User hanya dapat update diri sendiri
     if (currentUser.id !== id) {
       throw new ForbiddenException('Anda hanya dapat mengubah data sendiri');
     }
-    // User tidak boleh mengubah role
+    // Staff & User tidak boleh mengubah role
     delete updateUserDto.role;
     return this.usersService.update(id, updateUserDto);
   }
